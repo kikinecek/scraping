@@ -7,12 +7,15 @@ export interface ScraperInitProps {
 
 /**
  * Class that scraps products from e-commerce API.
- * Scraper offers ascending and descending scrapping.
+ * Scraper offers ascending and descending scraping.
+ * DESCENDING - recursively divides price range into halfs until all products are fetched
+ * ASCENDING - fetches products in smaller price ranges, if any price range has products count above the limit
+ * then uses DESCENDING method for that price range.
  * The scraper attempt to minimize dependency on API limits as much as possible
  * but the descending method is still dependent on the API price range
  */
 class Scraper {
-  private scrappedProducts: EcommerceProduct[] = [];
+  private scrapedProducts: EcommerceProduct[] = [];
 
   // price step is only valid for ascending parse
   private readonly defaultCurrentPriceStep = 200;
@@ -28,14 +31,14 @@ class Scraper {
 
   private initialized: boolean = true;
   
-  get getScrappedProducts(): EcommerceProduct[] {
-    return this.scrappedProducts;
+  get getScrapedProducts(): EcommerceProduct[] {
+    return this.scrapedProducts;
   }
 
   /**
-   * Method initializes Scraper for scrapping.
+   * Method initializes Scraper for scraping.
    * If config is provided then it uses values that are provided otherwise it uses default values.
-   * If initialization is not called before scrapping the scrapping methods will call it by themselves
+   * If initialization is not called before scraping the scraping methods will call it by themselves
    * @param config includes values that affect initializing Scraper properties
    * @returns reference to current intance of Scraper to make chain call possible
    */
@@ -47,7 +50,7 @@ class Scraper {
     this.ascCurrentMaxPrice = this.defaultCurrentMinPrice + priceStep;
     this.currentPriceStep = priceStep;
 
-    this.scrappedProducts = [];
+    this.scrapedProducts = [];
 
     this.initialized = true;
 
@@ -113,13 +116,13 @@ class Scraper {
     const { total } = await getProducts();
 
     // products are being fetched in batches (in price ranges - steps) until all products are fetched
-    while(this.scrappedProducts.length < total) {
+    while(this.scrapedProducts.length < total) {
       const response = await getProducts({ minPrice: this.currentMinPrice, maxPrice: this.ascCurrentMaxPrice });
 
       // if are products are not fetched in the price range then the price range is recursively divided into half
       // until all products are fetched from the price range
-      this.scrappedProducts = [
-        ...this.scrappedProducts,
+      this.scrapedProducts = [
+        ...this.scrapedProducts,
         ...(response.count < response.total
               ? (await this.solveRecursivelyOverLimitInPriceRange(this.currentMinPrice, this.ascCurrentMaxPrice))
               : response.products)
@@ -150,7 +153,7 @@ class Scraper {
 
     // if all products from the API are fetched at one request then nothing else has to be done
     // else price range is recursively divided into half until all products are fetched
-    this.scrappedProducts =
+    this.scrapedProducts =
       response.count < response.total
          ? (await this.solveRecursivelyOverLimitInPriceRange(this.currentMinPrice, this.dscCurrentMaxPrice))
          : response.products;
