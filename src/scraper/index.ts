@@ -9,7 +9,7 @@ export interface ScraperInitProps {
  * Class that scraps products from e-commerce API.
  * Scraper offers ascending and descending scraping.
  * DESCENDING - recursively divides price range into halfs until all products are fetched
- * ASCENDING - fetches products in smaller price ranges, if any price range has products count above the limit
+ * ASCENDING - fetches products in smaller price ranges (smaller price ranges are defined by STEP), if any price range has products count above the limit
  * then uses DESCENDING method for that price range.
  * The scraper attempt to minimize dependency on API limits as much as possible
  * but the descending method is still dependent on the API price range
@@ -65,10 +65,9 @@ class Scraper {
    * @throws error when price range is no able to divide anymore (that indicates that there are more products with the same price that APi allows to fetch at one request)
    */
   private async solveRecursivelyOverLimitInPriceRange(minPrice: number, maxPrice: number): Promise<EcommerceProduct[]> {
-    const priceRange = maxPrice - minPrice;
-    // the middle of the price range is rounded to the nearest hundredth place
-    // because the Scraper assumes that the prices have maximum 2 decimal digits
-    const halfMaxPrice = +(((priceRange) / 2) + minPrice).toFixed(3);
+    // the middle of the price range is rounded to the nearest thousandth place
+    // because the Scraper assumes that the prices have maximum 3 decimal digits
+    const halfMaxPrice = +(((maxPrice - minPrice) / 2) + minPrice).toFixed(3);
 
     // if middle of price range is same as minimal price range then the price range is not able to divide anymore
     // that indicates that there are more products in the price range then API allows to fetch at one request
